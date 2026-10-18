@@ -4,17 +4,17 @@
 !.env.example
 *.pem
 *.key
-secrets/
+/secrets/
 
 # Local data, databases, outputs (never commit provider data)
-data/
-cache/
+/data/
+/cache/
 *.db
 *.duckdb
 *.duckdb.wal
 *.sqlite
 *.parquet
-logs/
+/logs/
 reports/output/
 
 # Python
