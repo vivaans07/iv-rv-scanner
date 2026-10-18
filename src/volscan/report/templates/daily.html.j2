@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vol scan {{ asof }}</title>
+<style>
+  :root { --fg: #1d1d1f; --muted: #6e6e73; --bg: #ffffff; --line: #e5e5ea; --rich: #b42318; --cheap: #1f6feb; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #f2f2f7; --muted: #a1a1a6; --bg: #111113; --line: #2c2c2e; } }
+  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); max-width: 1100px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; } h2 { font-size: 17px; margin-top: 28px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 13px; }
+  th, td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  .wrap { overflow-x: auto; }
+  .RICH { color: var(--rich); font-weight: 600; } .CHEAP { color: var(--cheap); font-weight: 600; }
+  .note { color: var(--muted); }
+  img { max-width: 100%; height: auto; background: #fff; border-radius: 4px; }
+</style>
+</head>
+<body>
+{% macro pct(x) %}{{ "%.1f"|format(100 * x) if x == x else "n/a" }}{% endmacro %}
+{% macro num(x, f="%.1f") %}{{ f|format(x) if x == x else "n/a" }}{% endmacro %}
+<h1>Volatility scan for {{ asof }}</h1>
+<p class="note">Research and paper trading only. Not investment advice. No orders are sent anywhere.</p>
+<h2>Summary</h2>
+<p>{{ summary }}</p>
+<ul>
+<li>Tickers scanned: {{ n_scanned }}, surfaces fit: {{ n_fit }}, scored: {{ n_signals }}</li>
+<li>Risk-free rate: {{ "%.2f"|format(100 * rate) }}% ({{ rate_source }})</li>
+<li>Failures: {% if failures %}{% for f in failures %}{{ f.step }} / {{ f.ticker }}: {{ f.error }}{% if not loop.last %}; {% endif %}{% endfor %}{% else %}none{% endif %}</li>
+</ul>
+<h2>Trade candidates ({{ settings.signals.primary_tenor }}-day)</h2>
+<ul>
+{% for c in candidates %}<li class="{{ c.label }}">{{ c.line }}</li>
+{% else %}<li>None cleared |z| &ge; {{ settings.signals.entry_z }} with the liquidity and earnings filters.</li>{% endfor %}
+</ul>
+<h2>Ranked {{ settings.signals.primary_tenor }}-day spreads</h2>
+<div class="wrap"><table>
+<tr><th>Ticker</th><th>IV</th><th>Forecast</th><th>Raw spread</th><th>Adj. IV</th><th>Adj. z</th><th>Raw z</th><th>Excess vs median</th><th>z mode</th><th>Earnings</th><th>Label</th></tr>
+{% for r in primary %}<tr><td>{{ r.ticker }}</td><td>{{ pct(r.iv_raw) }}</td><td>{{ pct(r.forecast_vol) }}</td><td>{{ num(r.spread_raw, "%+.1f") }}</td><td>{{ pct(r.iv) }}</td><td>{{ num(r.z, "%+.2f") }}</td><td>{{ num(r.z_raw, "%+.2f") }}</td><td>{{ num(r.excess_vs_median, "%+.1f") }}</td><td>{{ r.z_mode }}</td><td>{{ "yes" if r.earnings_in_window else "no" }}</td><td class="{{ r.label }}">{{ r.label }}{{ "" if r.liquid else " (illiquid)" }}</td></tr>
+{% endfor %}</table></div>
+{% if earnings %}
+<h2>Earnings in the {{ settings.signals.primary_tenor }}-day window</h2>
+<div class="wrap"><table>
+<tr><th>Ticker</th><th>Date</th><th>Implied move (sd)</th><th>Implied abs move</th><th>Hist. abs move</th><th>Hist. events</th><th>Ex-earnings IV</th></tr>
+{% for r in earnings %}<tr><td>{{ r.ticker }}</td><td>{{ r.next_earnings }}</td><td>{{ pct(r.implied_move) }}%</td><td>{{ pct(r.implied_abs_move) }}%</td><td>{{ pct(r.hist_abs_move) }}%</td><td>{{ r.hist_n }}</td><td>{{ pct(r.base_iv) }}</td></tr>
+{% endfor %}</table></div>
+{% endif %}
+<h2>Charts</h2>
+{% for c in charts %}<h3>{{ c.title }}</h3><img alt="{{ c.title }}" src="data:image/png;base64,{{ c.b64 }}">
+{% endfor %}
+<h2>Open positions</h2>
+{% if open_positions %}<div class="wrap"><table>
+<tr><th>Ticker</th><th>Side</th><th>Contracts</th><th>Strike</th><th>Expiry</th><th>DTE</th><th>Spot</th><th>IV</th><th>Delta (sh)</th><th>Gamma</th><th>Vega $/pt</th><th>P&amp;L to date</th></tr>
+{% for p in open_positions %}<tr><td>{{ p.ticker }}</td><td>{{ "short" if p.qty < 0 else "long" }}</td><td>{{ "%.0f"|format(p.qty|abs) }}</td><td>{{ "%.2f"|format(p.strike) }}</td><td>{{ p.expiry }}</td><td>{{ p.dte }}</td><td>{{ "%.2f"|format(p.spot) }}</td><td>{{ pct(p.iv) }}</td><td>{{ "%+.1f"|format(p.delta) }}</td><td>{{ "%+.2f"|format(p.gamma) }}</td><td>{{ "%+.0f"|format(p.vega_dollars) }}</td><td>{{ "%+,.0f"|format(p.pnl_to_date) }}</td></tr>
+{% endfor %}</table></div>{% else %}<p>No open positions.</p>{% endif %}
+{% if stats %}
+<h2>Book statistics</h2>
+<div class="wrap"><table>
+<tr><td>Total P&amp;L</td><td>{{ "%+,.0f"|format(stats.total_pnl) }}</td></tr>
+<tr><td>Signal earned (gamma/theta + vega)</td><td>{{ "%+,.0f"|format(stats.signal_pnl) }}</td></tr>
+<tr><td>Hedging error + costs</td><td>{{ "%+,.0f"|format(stats.hedge_cost_pnl) }}</td></tr>
+<tr><td>of which transaction costs</td><td>{{ "%,.0f"|format(stats.costs) }}</td></tr>
+<tr><td>Positions (closed)</td><td>{{ "%d"|format(stats.n_positions) }} ({{ "%d"|format(stats.n_closed) }})</td></tr>
+<tr><td>Hit rate</td><td>{{ pct(stats.hit_rate) }}%</td></tr>
+<tr><td>Avg P&amp;L per closed trade</td><td>{{ num(stats.avg_pnl_per_trade, "%+,.0f") }}</td></tr>
+<tr><td>Sharpe (daily, annualized)</td><td>{{ num(stats.sharpe, "%.2f") }}</td></tr>
+<tr><td>Max drawdown</td><td>{{ "%,.0f"|format(stats.max_drawdown) }}</td></tr>
+<tr><td>Rich / cheap P&amp;L</td><td>{{ "%+,.0f"|format(stats.pnl_rich) }} / {{ "%+,.0f"|format(stats.pnl_cheap) }}</td></tr>
+<tr><td>Earnings / non-earnings P&amp;L</td><td>{{ "%+,.0f"|format(stats.pnl_earnings) }} / {{ "%+,.0f"|format(stats.pnl_no_earnings) }}</td></tr>
+</table></div>
+{% endif %}
+</body>
+</html>

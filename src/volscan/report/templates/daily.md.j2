@@ -1,0 +1,95 @@
+{% macro pct(x) %}{{ "%.1f"|format(100 * x) if x == x else "n/a" }}{% endmacro %}
+{% macro num(x, f="%.1f") %}{{ f|format(x) if x == x else "n/a" }}{% endmacro %}
+# Volatility scan for {{ asof }}
+
+> Research and paper trading only. Not investment advice. No orders are sent anywhere.
+
+## Summary
+
+{{ summary }}
+
+- Tickers scanned: {{ n_scanned }}, surfaces fit: {{ n_fit }}, scored: {{ n_signals }}
+- Risk-free rate: {{ "%.2f"|format(100 * rate) }}% ({{ rate_source }})
+{% if failures %}
+- Failures:
+{% for f in failures %}
+  - {{ f.step }} / {{ f.ticker }}: {{ f.error }}
+{% endfor %}
+{% else %}
+- Failures: none
+{% endif %}
+
+## Trade candidates ({{ settings.signals.primary_tenor }}-day)
+
+{% for c in candidates %}
+- {{ c.line }}
+{% else %}
+- None cleared |z| >= {{ settings.signals.entry_z }} with the liquidity and earnings filters.
+{% endfor %}
+
+## Ranked {{ settings.signals.primary_tenor }}-day spreads
+
+| Ticker | IV | Forecast | Raw spread | Adj. IV | Adj. z | Raw z | Excess vs median | z mode | Earnings | Label |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|
+{% for r in primary %}
+| {{ r.ticker }} | {{ pct(r.iv_raw) }} | {{ pct(r.forecast_vol) }} | {{ num(r.spread_raw, "%+.1f") }} | {{ pct(r.iv) }} | {{ num(r.z, "%+.2f") }} | {{ num(r.z_raw, "%+.2f") }} | {{ num(r.excess_vs_median, "%+.1f") }} | {{ r.z_mode }} | {{ "yes" if r.earnings_in_window else "no" }} | {{ r.label }}{{ "" if r.liquid else " (illiquid)" }} |
+{% endfor %}
+
+{% if secondary %}
+## {{ settings.signals.secondary_tenor }}-day spreads
+
+| Ticker | IV | Forecast | Raw spread | Adj. z | Label |
+|---|---:|---:|---:|---:|---|
+{% for r in secondary %}
+| {{ r.ticker }} | {{ pct(r.iv_raw) }} | {{ pct(r.forecast_vol) }} | {{ num(r.spread_raw, "%+.1f") }} | {{ num(r.z, "%+.2f") }} | {{ r.label }} |
+{% endfor %}
+{% endif %}
+
+{% if earnings %}
+## Earnings in the {{ settings.signals.primary_tenor }}-day window
+
+| Ticker | Date | Implied move (sd) | Implied abs move | Hist. abs move | Hist. events | Ex-earnings IV |
+|---|---|---:|---:|---:|---:|---:|
+{% for r in earnings %}
+| {{ r.ticker }} | {{ r.next_earnings }} | {{ pct(r.implied_move) }}% | {{ pct(r.implied_abs_move) }}% | {{ pct(r.hist_abs_move) }}% | {{ r.hist_n }} | {{ pct(r.base_iv) }} |
+{% endfor %}
+{% endif %}
+
+## Charts
+
+{% for c in charts %}
+### {{ c.title }}
+
+![{{ c.title }}]({{ asset_dir }}/{{ c.name }}.png)
+
+{% endfor %}
+
+## Open positions
+
+{% if open_positions %}
+| Ticker | Side | Contracts | Strike | Expiry | DTE | Spot | IV | Delta (sh) | Gamma | Vega $/pt | P&L to date |
+|---|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|
+{% for p in open_positions %}
+| {{ p.ticker }} | {{ "short" if p.qty < 0 else "long" }} | {{ "%.0f"|format(p.qty|abs) }} | {{ "%.2f"|format(p.strike) }} | {{ p.expiry }} | {{ p.dte }} | {{ "%.2f"|format(p.spot) }} | {{ pct(p.iv) }} | {{ "%+.1f"|format(p.delta) }} | {{ "%+.2f"|format(p.gamma) }} | {{ "%+.0f"|format(p.vega_dollars) }} | {{ "%+,.0f"|format(p.pnl_to_date) }} |
+{% endfor %}
+{% else %}
+No open positions.
+{% endif %}
+
+{% if stats %}
+## Book statistics
+
+| Metric | Value |
+|---|---:|
+| Total P&L | {{ "%+,.0f"|format(stats.total_pnl) }} |
+| Signal earned (gamma/theta + vega) | {{ "%+,.0f"|format(stats.signal_pnl) }} |
+| Hedging error + costs | {{ "%+,.0f"|format(stats.hedge_cost_pnl) }} |
+| of which transaction costs | {{ "%,.0f"|format(stats.costs) }} |
+| Positions (closed) | {{ "%d"|format(stats.n_positions) }} ({{ "%d"|format(stats.n_closed) }}) |
+| Hit rate | {{ pct(stats.hit_rate) }}% |
+| Avg P&L per closed trade | {{ num(stats.avg_pnl_per_trade, "%+,.0f") }} |
+| Sharpe (daily, annualized) | {{ num(stats.sharpe, "%.2f") }} |
+| Max drawdown | {{ "%,.0f"|format(stats.max_drawdown) }} |
+| Rich / cheap P&L | {{ "%+,.0f"|format(stats.pnl_rich) }} / {{ "%+,.0f"|format(stats.pnl_cheap) }} |
+| Earnings / non-earnings P&L | {{ "%+,.0f"|format(stats.pnl_earnings) }} / {{ "%+,.0f"|format(stats.pnl_no_earnings) }} |
+{% endif %}

@@ -53,6 +53,7 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "NPY", "RUF"]
 ignore = [
+    "E501",  # the formatter wraps code; long f-strings in messages are left alone
     "N803",  # math-style argument names (K, T, S) are clearer here
     "N806",
     "RUF001",  # Greek letters in docstrings are intentional
