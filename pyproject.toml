@@ -1,0 +1,86 @@
+[project]
+name = "volscan"
+version = "0.1.0"
+description = "Daily implied-vs-realized volatility scanner with delta-hedged paper trading"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "scipy>=1.11",
+    "arch>=6.2",
+    "statsmodels>=0.14",
+    "pydantic>=2.5",
+    "python-dotenv>=1.0",
+    "typer>=0.9",
+    "duckdb>=0.10",
+    "matplotlib>=3.8",
+    "jinja2>=3.1",
+    "pyyaml>=6.0",
+    "yfinance>=0.2.40",
+    "requests>=2.31",
+    "exchange-calendars>=4.5",
+]
+
+[project.scripts]
+volscan = "volscan.cli:app"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "hypothesis>=6.100",
+    "pandas-stubs",
+    "types-PyYAML",
+    "types-requests",
+    "pre-commit>=3.7",
+    "nbstripout>=0.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/volscan"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "NPY", "RUF"]
+ignore = [
+    "N803",  # math-style argument names (K, T, S) are clearer here
+    "N806",
+    "RUF001",  # Greek letters in docstrings are intentional
+    "RUF002",
+    "RUF003",
+]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+packages = ["volscan"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "volscan.pricing.*",
+    "volscan.surface.*",
+    "volscan.forecast.*",
+    "volscan.signals.*",
+    "volscan.paper.*",
+]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

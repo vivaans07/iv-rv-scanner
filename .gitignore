@@ -1,0 +1,56 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Local data, databases, outputs (never commit provider data)
+data/
+cache/
+*.db
+*.duckdb
+*.duckdb.wal
+*.sqlite
+*.parquet
+logs/
+reports/output/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS / filesystem
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor and assistant tooling
+.vscode/
+.idea/
+CLAUDE.md
+.claude/
+AGENTS.md
+.cursor/
+.cursorrules
+.aider*
+.copilot/
+.continue/
+.codeium/
+.windsurf/

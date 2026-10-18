@@ -1,0 +1,63 @@
+# Tickers to scan. Edit freely; the liquidity screen drops names whose
+# near-term ATM options are too thin on a given day.
+tickers:
+  # Index and sector ETFs
+  - SPY
+  - QQQ
+  - IWM
+  - DIA
+  - XLF
+  - XLE
+  - XLK
+  - GLD
+  - TLT
+  # Large-cap tech
+  - AAPL
+  - MSFT
+  - NVDA
+  - AMZN
+  - META
+  - GOOGL
+  - TSLA
+  - AMD
+  - AVGO
+  - NFLX
+  - CRM
+  - ORCL
+  - ADBE
+  - INTC
+  - MU
+  - QCOM
+  # Financials
+  - JPM
+  - BAC
+  - GS
+  - WFC
+  - C
+  # Energy
+  - XOM
+  - CVX
+  # Healthcare
+  - UNH
+  - LLY
+  - JNJ
+  - PFE
+  - MRK
+  - ABBV
+  # Consumer and industrials
+  - WMT
+  - COST
+  - HD
+  - NKE
+  - DIS
+  - BA
+  - CAT
+  # Higher-vol names
+  - UBER
+  - COIN
+  - PLTR
+  - SHOP
+  - SMCI
+
+# ETFs have no earnings; the earnings module skips them.
+etfs: [SPY, QQQ, IWM, DIA, XLF, XLE, XLK, GLD, TLT]

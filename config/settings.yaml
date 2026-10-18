@@ -1,0 +1,66 @@
+ingest:
+  min_dte: 7
+  max_dte: 180
+  history_years: 4
+  max_retries: 4
+  backoff_seconds: 2.0
+  pause_between_tickers: 0.5
+
+cleaning:
+  max_rel_spread: 0.25        # (ask - bid) / mid
+  min_open_interest: 10
+  min_bid: 0.01
+  forward_strike_band: 0.05   # use strikes within 5% of spot for put-call parity
+
+liquidity:
+  min_atm_open_interest: 100
+  min_atm_volume: 10
+  max_atm_rel_spread: 0.10
+
+svi:
+  min_quotes: 6
+  restarts: 8
+  weight: vega               # vega | inverse_spread | equal
+  arb_grid_points: 201
+
+term:
+  tenors_days: [30, 60, 90]  # calendar days
+
+forecast:
+  har_window: 1000           # trading days used to fit HAR
+  garch_window: 1000
+  min_history: 300
+  ensemble: inverse_qlike    # inverse_qlike | mean
+  eval_start_fraction: 0.6   # out-of-sample evaluation starts here
+
+signals:
+  primary_tenor: 30
+  secondary_tenor: 60
+  vrp_lookback: 252
+  min_history_for_z: 40
+  entry_z: 1.5
+  exit_z: 0.5
+  top_n: 5
+  earnings_lookback_events: 10
+  trade_through_earnings: false   # only trade earnings tenors if ex-earnings signal clears entry_z
+
+paper:
+  target_dte: 30
+  vega_per_vol_point: 1000.0  # dollars of P&L per 1 vol point move
+  max_portfolio_vega: 10000.0 # abs dollars per vol point across the book
+  max_positions: 10
+  holding_days: 10
+  exit_days_before_expiry: 5
+  spread_cross_fraction: 0.5  # fraction of half-spread paid on entry and exit
+  hedge_vol: implied          # implied | forecast
+  stock_cost_bps: 1.0
+  stock_cost_per_share: 0.0
+  contract_multiplier: 100
+
+rates:
+  fred_series: DTB3
+  fallback_rate: 0.04
+
+conventions:
+  trading_days_per_year: 252
+  calendar_days_per_year: 365
