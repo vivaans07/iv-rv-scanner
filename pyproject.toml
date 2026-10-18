@@ -32,7 +32,6 @@ dev = [
     "mypy>=1.10",
     "pytest>=8.0",
     "hypothesis>=6.100",
-    "pandas-stubs",
     "types-PyYAML",
     "types-requests",
     "pre-commit>=3.7",
