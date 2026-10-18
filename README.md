@@ -27,7 +27,7 @@ transaction costs cost**.
 ```bash
 git clone https://github.com/vivaans07/iv-rv-scanner.git
 cd iv-rv-scanner
-uv sync --group dev          # or: pip install -r requirements-lock.txt -e .
+uv sync --group dev
 cp .env.example .env          # optional: add a FRED key
 uv run volscan run-daily --tickers SPY,AAPL,NVDA,JPM,XOM --force
 open reports/output/*.html

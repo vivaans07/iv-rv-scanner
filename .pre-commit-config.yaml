@@ -4,20 +4,26 @@ repos:
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=500"]
+        exclude: ^uv.lock$
       - id: check-yaml
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: detect-private-key
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.21.2
+  # Uses the locally installed gitleaks binary (brew install gitleaks) rather
+  # than building it from source inside pre-commit.
+  - repo: local
     hooks:
       - id: gitleaks
+        name: gitleaks
+        entry: gitleaks git --pre-commit --staged --redact --verbose
+        language: system
+        pass_filenames: false
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        args: ["--exclude-files", "uv.lock|requirements-lock.txt"]
+        args: ["--exclude-files", "uv.lock"]
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.1
     hooks:
