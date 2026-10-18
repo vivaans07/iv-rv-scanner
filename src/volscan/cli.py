@@ -184,10 +184,10 @@ def backtest(
             raise typer.BadParameter(f"no stored snapshots between {s} and {e}")
         reset_book(store, "backtest")
         for d in days:
-            have_fit = not store.read("surface_metrics", "asof = ?", [d]).empty
+            have_fit = not store.read("surface_metrics", '"asof" = ?', [d]).empty
             if refit or not have_fit:
                 run_fit(store, settings, d)
-            if refit or store.read("forecasts", "asof = ?", [d]).empty:
+            if refit or store.read("forecasts", '"asof" = ?', [d]).empty:
                 run_forecast(store, settings, d)
             run_signals(store, settings, d)
             out = run_trade(store, settings, d, book="backtest")

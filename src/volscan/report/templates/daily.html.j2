@@ -53,22 +53,22 @@
 <h2>Open positions</h2>
 {% if open_positions %}<div class="wrap"><table>
 <tr><th>Ticker</th><th>Side</th><th>Contracts</th><th>Strike</th><th>Expiry</th><th>DTE</th><th>Spot</th><th>IV</th><th>Delta (sh)</th><th>Gamma</th><th>Vega $/pt</th><th>P&amp;L to date</th></tr>
-{% for p in open_positions %}<tr><td>{{ p.ticker }}</td><td>{{ "short" if p.qty < 0 else "long" }}</td><td>{{ "%.0f"|format(p.qty|abs) }}</td><td>{{ "%.2f"|format(p.strike) }}</td><td>{{ p.expiry }}</td><td>{{ p.dte }}</td><td>{{ "%.2f"|format(p.spot) }}</td><td>{{ pct(p.iv) }}</td><td>{{ "%+.1f"|format(p.delta) }}</td><td>{{ "%+.2f"|format(p.gamma) }}</td><td>{{ "%+.0f"|format(p.vega_dollars) }}</td><td>{{ "%+,.0f"|format(p.pnl_to_date) }}</td></tr>
+{% for p in open_positions %}<tr><td>{{ p.ticker }}</td><td>{{ "short" if p.qty < 0 else "long" }}</td><td>{{ "%.0f"|format(p.qty|abs) }}</td><td>{{ "%.2f"|format(p.strike) }}</td><td>{{ p.expiry }}</td><td>{{ p.dte }}</td><td>{{ "%.2f"|format(p.spot) }}</td><td>{{ pct(p.iv) }}</td><td>{{ "%+.1f"|format(p.delta) }}</td><td>{{ "%+.2f"|format(p.gamma) }}</td><td>{{ "%+.0f"|format(p.vega_dollars) }}</td><td>{{ p.pnl_to_date|money }}</td></tr>
 {% endfor %}</table></div>{% else %}<p>No open positions.</p>{% endif %}
 {% if stats %}
 <h2>Book statistics</h2>
 <div class="wrap"><table>
-<tr><td>Total P&amp;L</td><td>{{ "%+,.0f"|format(stats.total_pnl) }}</td></tr>
-<tr><td>Signal earned (gamma/theta + vega)</td><td>{{ "%+,.0f"|format(stats.signal_pnl) }}</td></tr>
-<tr><td>Hedging error + costs</td><td>{{ "%+,.0f"|format(stats.hedge_cost_pnl) }}</td></tr>
-<tr><td>of which transaction costs</td><td>{{ "%,.0f"|format(stats.costs) }}</td></tr>
+<tr><td>Total P&amp;L</td><td>{{ stats.total_pnl|money }}</td></tr>
+<tr><td>Signal earned (gamma/theta + vega)</td><td>{{ stats.signal_pnl|money }}</td></tr>
+<tr><td>Hedging error + costs</td><td>{{ stats.hedge_cost_pnl|money }}</td></tr>
+<tr><td>of which transaction costs</td><td>{{ stats.costs|money(false) }}</td></tr>
 <tr><td>Positions (closed)</td><td>{{ "%d"|format(stats.n_positions) }} ({{ "%d"|format(stats.n_closed) }})</td></tr>
 <tr><td>Hit rate</td><td>{{ pct(stats.hit_rate) }}%</td></tr>
-<tr><td>Avg P&amp;L per closed trade</td><td>{{ num(stats.avg_pnl_per_trade, "%+,.0f") }}</td></tr>
+<tr><td>Avg P&amp;L per closed trade</td><td>{{ stats.avg_pnl_per_trade|money }}</td></tr>
 <tr><td>Sharpe (daily, annualized)</td><td>{{ num(stats.sharpe, "%.2f") }}</td></tr>
-<tr><td>Max drawdown</td><td>{{ "%,.0f"|format(stats.max_drawdown) }}</td></tr>
-<tr><td>Rich / cheap P&amp;L</td><td>{{ "%+,.0f"|format(stats.pnl_rich) }} / {{ "%+,.0f"|format(stats.pnl_cheap) }}</td></tr>
-<tr><td>Earnings / non-earnings P&amp;L</td><td>{{ "%+,.0f"|format(stats.pnl_earnings) }} / {{ "%+,.0f"|format(stats.pnl_no_earnings) }}</td></tr>
+<tr><td>Max drawdown</td><td>{{ stats.max_drawdown|money(false) }}</td></tr>
+<tr><td>Rich / cheap P&amp;L</td><td>{{ stats.pnl_rich|money }} / {{ stats.pnl_cheap|money }}</td></tr>
+<tr><td>Earnings / non-earnings P&amp;L</td><td>{{ stats.pnl_earnings|money }} / {{ stats.pnl_no_earnings|money }}</td></tr>
 </table></div>
 {% endif %}
 </body>

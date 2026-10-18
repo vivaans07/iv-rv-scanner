@@ -123,15 +123,15 @@ def build_report(
     asset_dir = out_dir / f"{asof.isoformat()}_files"
     asset_dir.mkdir(parents=True, exist_ok=True)
 
-    failures = store.read("run_log", "asof = ?", [asof])
-    sig = store.read("signals", "asof = ?", [asof])
+    failures = store.read("run_log", '"asof" = ?', [asof])
+    sig = store.read("signals", '"asof" = ?', [asof])
     primary = sig[sig["tenor_days"] == settings.signals.primary_tenor] if not sig.empty else sig
     secondary = sig[sig["tenor_days"] == settings.signals.secondary_tenor] if not sig.empty else sig
     if not primary.empty:
         primary = primary.reindex(primary["z"].sort_values(ascending=False).index)
-    slices = store.read("svi_slices", "asof = ?", [asof])
-    quotes = store.read("iv_quotes", "asof = ?", [asof])
-    metrics = store.read("surface_metrics", "asof = ?", [asof])
+    slices = store.read("svi_slices", '"asof" = ?', [asof])
+    quotes = store.read("iv_quotes", '"asof" = ?', [asof])
+    metrics = store.read("surface_metrics", '"asof" = ?', [asof])
 
     charts: list[Chart] = []
     if not primary.empty and not slices.empty:
@@ -142,7 +142,7 @@ def build_report(
                 smile_chart(t, quotes[quotes["ticker"] == t], slices[slices["ticker"] == t])
             )
 
-    marks = store.read("marks", "book = ? AND asof <= ?", [book, asof])
+    marks = store.read("marks", 'book = ? AND "asof" <= ?', [book, asof])
     positions = current_positions(store, book, asof)
     stats = summary_stats(marks, positions) if not marks.empty else {}
     daily = book_daily(marks) if not marks.empty else pd.DataFrame()
@@ -182,6 +182,7 @@ def build_report(
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    env.filters["money"] = money
     ctx = {
         "asof": asof,
         "rate": rate_for(store, asof, settings.rates.fallback_rate),
@@ -212,6 +213,13 @@ def build_report(
     return {"markdown": md_path, "html": html_path}
 
 
+def money(x: float, sign: bool = True) -> str:
+    """Whole dollars with thousands separators; Jinja's % formatting lacks ','."""
+    if x is None or x != x:
+        return "n/a"
+    return format(float(x), "+,.0f" if sign else ",.0f")
+
+
 def _rate_source(store: Store, asof: date) -> str:
-    df = store.read("rates", "asof <= ?", [asof])
+    df = store.read("rates", '"asof" <= ?', [asof])
     return str(df.sort_values("asof")["source"].iloc[-1]) if not df.empty else "fallback constant"

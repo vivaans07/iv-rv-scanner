@@ -13,6 +13,7 @@ from volscan.pricing.black import black76_price
 
 RATE = 0.04
 DIV_YIELD = 0.01
+EPOCH = date(2020, 1, 1)
 
 
 def smile(k: np.ndarray, T: float, atm: float = 0.25) -> np.ndarray:
@@ -30,7 +31,9 @@ class FakeProvider(DataProvider):
         vol: float = 0.25,
         fail: set[str] | None = None,
         flaky: dict[str, int] | None = None,
+        iv_bump: dict[str, float] | None = None,
     ) -> None:
+        self.iv_bump = iv_bump or {}
         self.seed = seed
         self.vol = vol
         self.fail = fail or set()
@@ -44,15 +47,18 @@ class FakeProvider(DataProvider):
             raise TimeoutError("transient")
 
     def _path(self, ticker: str, start: date, end: date) -> pd.DataFrame:
-        days = pd.bdate_range(start, end)
+        # Always simulate from a fixed epoch so every window of the same ticker
+        # sees the same prices.
+        days = pd.bdate_range(EPOCH, end)
         rng = np.random.default_rng(zlib.crc32(f"{ticker}-{self.seed}".encode()))
         dt = 1 / 252
-        rets = rng.normal(-0.5 * self.vol**2 * dt, self.vol * np.sqrt(dt), len(days))
+        n = len(days)
+        rets = rng.normal(-0.5 * self.vol**2 * dt, self.vol * np.sqrt(dt), n)
         close = 100.0 * np.exp(np.cumsum(rets))
-        open_ = close * np.exp(rng.normal(0, 0.003, len(days)))
-        hi = np.maximum(open_, close) * np.exp(np.abs(rng.normal(0, 0.006, len(days))))
-        lo = np.minimum(open_, close) * np.exp(-np.abs(rng.normal(0, 0.006, len(days))))
-        return pd.DataFrame(
+        open_ = close * np.exp(rng.normal(0, 0.003, n))
+        hi = np.maximum(open_, close) * np.exp(np.abs(rng.normal(0, 0.006, n)))
+        lo = np.minimum(open_, close) * np.exp(-np.abs(rng.normal(0, 0.006, n)))
+        df = pd.DataFrame(
             {
                 "date": days.date,
                 "open": open_,
@@ -64,6 +70,7 @@ class FakeProvider(DataProvider):
                 "split_factor": 1.0,
             }
         )
+        return df[df["date"] >= start].reset_index(drop=True)
 
     def get_history(self, ticker: str, start: date, end: date) -> pd.DataFrame:
         self._check(ticker)
@@ -83,7 +90,7 @@ class FakeProvider(DataProvider):
         F = spot * np.exp((RATE - DIV_YIELD) * T)
         strikes = np.round(np.arange(0.7, 1.31, 0.025) * spot, 2)
         k = np.log(strikes / F)
-        vol = smile(k, T, self.vol)
+        vol = smile(k, T, self.vol + self.iv_bump.get(ticker, 0.0))
         rows = []
         for kind in ("C", "P"):
             mid = black76_price(F, strikes, T, RATE, vol, kind == "C")

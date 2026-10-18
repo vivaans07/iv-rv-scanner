@@ -48,7 +48,7 @@ def _log_failures(store: Store, asof: date, step: str, failures: dict[str, str])
 
 
 def rate_for(store: Store, asof: date, fallback: float) -> float:
-    df = store.read("rates", "asof <= ?", [asof])
+    df = store.read("rates", '"asof" <= ?', [asof])
     if df.empty:
         return fallback
     return float(df.sort_values("asof")["rate"].iloc[-1])
@@ -57,14 +57,16 @@ def rate_for(store: Store, asof: date, fallback: float) -> float:
 def chain_dates(store: Store) -> list[date]:
     if not store.has_table("chains"):
         return []
-    return [_d(x) for x in store.query("SELECT DISTINCT asof FROM chains ORDER BY asof")["asof"]]
+    return [
+        _d(x) for x in store.query('SELECT DISTINCT "asof" FROM chains ORDER BY "asof"')["asof"]
+    ]
 
 
 # --------------------------------------------------------------------------- fit
 
 
 def run_fit(store: Store, settings: Settings, asof: date) -> dict[str, str]:
-    chains = store.read("chains", "asof = ?", [asof])
+    chains = store.read("chains", '"asof" = ?', [asof])
     if chains.empty:
         raise RuntimeError(f"no option chains stored for {asof}; run ingest first")
     rate = rate_for(store, asof, settings.rates.fallback_rate)
@@ -109,7 +111,7 @@ def _weights(
     store: Store, ticker: str, prices: pd.DataFrame, asof: date, settings: Settings
 ) -> dict[str, float]:
     tenor = settings.signals.primary_tenor
-    cached = store.read("forecast_eval", "ticker = ? AND asof <= ?", [ticker, asof])
+    cached = store.read("forecast_eval", 'ticker = ? AND "asof" <= ?', [ticker, asof])
     if not cached.empty:
         latest = _d(cached["asof"].max())
         if (asof - latest).days < EVAL_REFRESH_DAYS:
@@ -192,15 +194,15 @@ def _drop_earnings_days(prices: pd.DataFrame, earnings: list[date]) -> pd.DataFr
 
 
 def run_signals(store: Store, settings: Settings, asof: date) -> pd.DataFrame:
-    metrics = store.read("surface_metrics", "asof = ?", [asof])
-    forecasts = store.read("forecasts", "asof = ?", [asof])
+    metrics = store.read("surface_metrics", '"asof" = ?', [asof])
+    forecasts = store.read("forecasts", '"asof" = ?', [asof])
     if metrics.empty or forecasts.empty:
         raise RuntimeError(f"surface metrics or forecasts missing for {asof}")
-    slices = store.read("svi_slices", "asof = ?", [asof])
-    liquidity = store.read("liquidity", "asof = ?", [asof])
+    slices = store.read("svi_slices", '"asof" = ?', [asof])
+    liquidity = store.read("liquidity", '"asof" = ?', [asof])
     earnings = store.read("earnings")
     prices = store.read("prices", "date <= ?", [asof])
-    history = store.read("signals", "asof < ?", [asof])
+    history = store.read("signals", '"asof" < ?', [asof])
     if not history.empty:
         history = history.assign(asof=[_d(x) for x in history["asof"]])
     sig = build_signals(
@@ -304,7 +306,7 @@ class NoDataMarket:
 
 
 def _load_positions(store: Store, book: str, asof: date) -> list[Position]:
-    states = store.read("position_states", "book = ? AND asof < ?", [book, asof])
+    states = store.read("position_states", 'book = ? AND "asof" < ?', [book, asof])
     if states.empty:
         return []
     states = states.sort_values("asof").groupby("position_id").tail(1)
@@ -327,14 +329,14 @@ def _split_factor(prices: pd.DataFrame, after: date, upto: date) -> float:
 def run_trade(store: Store, settings: Settings, asof: date, book: str = "live") -> dict[str, int]:
     cfg = settings.paper
     rate = rate_for(store, asof, settings.rates.fallback_rate)
-    chains = store.read("chains", "asof = ?", [asof])
-    slices = store.read("svi_slices", "asof = ?", [asof])
+    chains = store.read("chains", '"asof" = ?', [asof])
+    slices = store.read("svi_slices", '"asof" = ?', [asof])
     signals = store.read(
-        "signals", "asof = ? AND tenor_days = ?", [asof, settings.signals.primary_tenor]
+        "signals", '"asof" = ? AND tenor_days = ?', [asof, settings.signals.primary_tenor]
     )
     fc = store.read(
         "forecasts",
-        "asof = ? AND model = 'ensemble' AND tenor_days = ?",
+        "\"asof\" = ? AND model = 'ensemble' AND tenor_days = ?",
         [asof, settings.signals.primary_tenor],
     )
     fc_vol = dict(zip(fc["ticker"], fc["vol"], strict=False)) if not fc.empty else {}
@@ -414,7 +416,7 @@ def run_trade(store: Store, settings: Settings, asof: date, book: str = "live") 
 def current_positions(store: Store, book: str = "live", asof: date | None = None) -> pd.DataFrame:
     where, params = "book = ?", [book]
     if asof:
-        where += " AND asof <= ?"
+        where += ' AND "asof" <= ?'
         params.append(asof)  # type: ignore[arg-type]
     states = store.read("position_states", where, params)
     if states.empty:
