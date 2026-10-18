@@ -67,28 +67,34 @@ def year_fraction(asof: date, expiry: date) -> float:
 
 
 def estimate_forward(
-    quotes: pd.DataFrame, spot: float, T: float, r: float, band: float
+    quotes: pd.DataFrame, spot: float, T: float, r: float, n_pairs: int = 5
 ) -> tuple[float, int]:
-    """Median forward implied by put-call parity on near-the-money strikes.
+    """Median forward implied by put-call parity on the most at-the-money strikes.
 
     C - P = DF (F - K)  =>  F = K + (C - P) / DF
 
+    "Most at-the-money" means the strikes where |C - P| is smallest, which is
+    where the forward actually is. Choosing strikes by distance from the
+    reported spot would break whenever the chain and the spot are captured at
+    different times, which is common with delayed data.
+
     Returns (forward, number of strikes used). Falls back to spot * e^{rT}
-    when no call/put pair survives cleaning near the money.
+    when no call/put pair survives cleaning.
     """
     df = np.exp(-r * T)
-    near = quotes[(quotes["strike"] - spot).abs() <= band * spot]
-    calls = near[near["option_type"] == "C"].set_index("strike")["mid"]
-    puts = near[near["option_type"] == "P"].set_index("strike")["mid"]
+    calls = quotes[quotes["option_type"] == "C"].groupby("strike")["mid"].first()
+    puts = quotes[quotes["option_type"] == "P"].groupby("strike")["mid"].first()
     common = calls.index.intersection(puts.index)
     if len(common) == 0:
         return float(spot * np.exp(r * T)), 0
-    implied = common.to_numpy() + (calls[common].to_numpy() - puts[common].to_numpy()) / df
-    return float(np.median(implied)), len(common)
+    diff = (calls[common] - puts[common]).abs().sort_values()
+    best = diff.index[:n_pairs]
+    implied = best.to_numpy() + (calls[best].to_numpy() - puts[best].to_numpy()) / df
+    return float(np.median(implied)), len(best)
 
 
 def implied_vol_table(
-    quotes: pd.DataFrame, asof: date, spot: float, r: float, band: float
+    quotes: pd.DataFrame, asof: date, spot: float, r: float, n_pairs: int = 5
 ) -> pd.DataFrame:
     """OTM implied vols per expiry with log-moneyness and total variance.
 
@@ -100,7 +106,7 @@ def implied_vol_table(
         T = year_fraction(asof, pd.Timestamp(expiry).date())
         if T <= 0:
             continue
-        F, n_pairs = estimate_forward(grp, spot, T, r, band)
+        F, n_used = estimate_forward(grp, spot, T, r, n_pairs)
         otm = grp[
             ((grp["option_type"] == "P") & (grp["strike"] < F))
             | ((grp["option_type"] == "C") & (grp["strike"] >= F))
@@ -117,7 +123,7 @@ def implied_vol_table(
         otm["expiry"] = pd.Timestamp(expiry).date()
         otm["T"] = T
         otm["forward"] = F
-        otm["n_parity"] = n_pairs
+        otm["n_parity"] = n_used
         otm["k"] = np.log(otm["strike"] / F)
         otm["w"] = otm["iv"] ** 2 * T
         otm["vega"] = black76_greeks(

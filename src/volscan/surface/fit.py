@@ -57,7 +57,7 @@ def fit_ticker_surface(
 ) -> SurfaceResult:
     spot = float(chain["spot"].iloc[0])
     clean, stats = filter_quotes(chain, settings.cleaning)
-    quotes = implied_vol_table(clean, asof, spot, rate, settings.cleaning.forward_strike_band)
+    quotes = implied_vol_table(clean, asof, spot, rate, settings.cleaning.forward_pairs)
     if quotes.empty:
         raise ValueError("no usable implied vols after cleaning")
 

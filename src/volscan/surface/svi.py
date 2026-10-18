@@ -104,6 +104,29 @@ def _from_x(x: FloatArray) -> SviParams:
     return SviParams(a, b, rho, m, sigma)
 
 
+def loss_and_grad(
+    x: FloatArray, k: FloatArray, target: FloatArray, wt: FloatArray
+) -> tuple[float, FloatArray]:
+    """Weighted squared error in total variance and its gradient in (v, b, rho, m, sigma)."""
+    v, b, rho, m, sig = x
+    root = np.sqrt(1.0 - rho * rho)
+    dx = k - m
+    R = np.sqrt(dx * dx + sig * sig)
+    model = v - b * sig * root + b * (rho * dx + R)
+    resid = model - target
+    # Analytic Jacobian of w with respect to (v, b, rho, m, sigma).
+    jac = np.stack(
+        [
+            np.ones_like(k),
+            -sig * root + rho * dx + R,
+            b * sig * rho / root + b * dx,
+            b * (-rho - dx / R),
+            -b * root + b * sig / R,
+        ]
+    )
+    return float(np.sum(wt * resid * resid)), 2.0 * jac @ (wt * resid)
+
+
 def fit_svi(
     k: FloatArray,
     w: FloatArray,
@@ -155,13 +178,13 @@ def fit_svi(
         (1e-4, 2.0 * span + 1.0),
     ]
 
-    def loss(x: FloatArray) -> float:
-        return float(np.sum(wt * (_from_x(x).total_variance(k) - wn) ** 2))
+    def loss(x: FloatArray) -> tuple[float, FloatArray]:
+        return loss_and_grad(x, k, wn, wt)
 
     best_x, best_f = None, np.inf
     for p in candidates:
         x0 = np.clip(_to_x(p), [b[0] for b in bounds], [b[1] for b in bounds])
-        res = minimize(loss, x0, method="L-BFGS-B", bounds=bounds)
+        res = minimize(loss, x0, jac=True, method="L-BFGS-B", bounds=bounds)
         if res.fun < best_f:
             best_x, best_f = res.x, float(res.fun)
     assert best_x is not None

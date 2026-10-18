@@ -10,7 +10,7 @@ cleaning:
   max_rel_spread: 0.25        # (ask - bid) / mid
   min_open_interest: 10
   min_bid: 0.01
-  forward_strike_band: 0.05   # use strikes within 5% of spot for put-call parity
+  forward_pairs: 5            # most-ATM call/put pairs used for the parity forward
 
 liquidity:
   min_atm_open_interest: 100

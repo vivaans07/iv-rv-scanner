@@ -26,7 +26,7 @@ class CleaningSettings(BaseModel):
     max_rel_spread: float = 0.25
     min_open_interest: int = 10
     min_bid: float = 0.01
-    forward_strike_band: float = 0.05
+    forward_pairs: int = 5
 
 
 class LiquiditySettings(BaseModel):

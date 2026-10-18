@@ -16,6 +16,7 @@ from volscan.surface.svi import (
     butterfly_density,
     calendar_violations,
     fit_svi,
+    loss_and_grad,
     smile_metrics,
 )
 from volscan.surface.term import TermStructure
@@ -85,9 +86,9 @@ def test_forward_from_parity_handles_dividends() -> None:
     for kind in ("C", "P"):
         px = black76_price(F_true, K, T, RATE, 0.3, kind == "C")
         rows.append(pd.DataFrame({"strike": K, "option_type": kind, "mid": px}))
-    F, n = estimate_forward(pd.concat(rows), S, T, RATE, band=0.1)
+    F, n = estimate_forward(pd.concat(rows), S * 1.3, T, RATE, n_pairs=5)  # stale spot
     assert pytest.approx(F_true, rel=1e-10) == F
-    assert n == len(K)
+    assert n == 5
 
 
 def test_filter_quotes_drops_bad_rows() -> None:
@@ -120,3 +121,15 @@ def test_end_to_end_surface_from_fake_chain() -> None:
     assert m30["rr25"] < 0
     ok, why = liquidity_check(chain, chain["spot"].iloc[0], asof, 7, settings.liquidity)
     assert ok, why
+
+
+def test_svi_analytic_gradient_matches_finite_differences() -> None:
+    from scipy.optimize import approx_fprime
+
+    k = np.linspace(-0.4, 0.3, 25)
+    target = TRUE.total_variance(k) * 1.1
+    wt = np.full(k.size, 1 / k.size)
+    x = np.array([0.02, 0.09, -0.3, 0.01, 0.15])
+    _, grad = loss_and_grad(x, k, target, wt)
+    fd = approx_fprime(x, lambda z: loss_and_grad(z, k, target, wt)[0], 1e-8)
+    np.testing.assert_allclose(grad, fd, rtol=1e-4, atol=1e-9)
