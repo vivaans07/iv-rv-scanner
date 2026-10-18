@@ -112,3 +112,17 @@ def test_build_signals_end_to_end() -> None:
     assert p.loc["DDD", "label"] == "RICH" and p.loc["DDD", "candidate"]
     assert "DDD 30-day IV 50.0 vs forecast 26.0: +24.0 vol pts" in p.loc["DDD", "line"]
     assert "→ RICH" in p.loc["DDD", "line"]
+
+
+def test_expiry_on_earnings_date_is_not_treated_as_pre_event() -> None:
+    # Before-the-open reporter: the expiry on the announcement date already
+    # contains the jump, so using it as the "clean" expiry would hide the event.
+    base_vol, move = 0.25, 0.04
+    e_date = ASOF + timedelta(days=14)
+    expiries = [ASOF + timedelta(days=d) for d in (7, 14, 28)]
+    T = np.array([(e - ASOF).days / 365 for e in expiries])
+    w = base_vol**2 * T + np.where(np.array(expiries) >= e_date, move**2, 0.0)
+    slices = pd.DataFrame({"expiry": expiries, "T": T, "atm_vol": np.sqrt(w / T)})
+    split = split_event_variance(slices, ASOF, e_date)
+    assert split is not None
+    assert split.implied_move_sd == pytest.approx(move, rel=1e-9)

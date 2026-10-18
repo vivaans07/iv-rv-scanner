@@ -194,7 +194,10 @@ def fit_svi(
     iv_fit = params.implied_vol(k, T)
     iv_mkt = np.sqrt(w / T)
     rmse = float(np.sqrt(np.mean((iv_fit - iv_mkt) ** 2)) * 100.0)
-    grid = np.linspace(min(k_lo, -1.0) - 0.5, max(k_hi, 1.0) + 0.5, arb_grid)
+    # Check only where there is data (plus a small margin). Far outside the
+    # quoted strikes the fit is pure extrapolation and its density says little.
+    margin = max(0.1 * span, 0.02)
+    grid = np.linspace(k_lo - margin, k_hi + margin, arb_grid)
     g = butterfly_density(params, grid)
     return SviFit(
         params=params,

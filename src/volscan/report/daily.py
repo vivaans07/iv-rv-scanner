@@ -183,6 +183,16 @@ def build_report(
         lstrip_blocks=True,
     )
     env.filters["money"] = money
+
+    def records(df: pd.DataFrame) -> list[dict[str, Any]]:
+        if df.empty:
+            return []
+        out = df.copy()
+        for col in out.columns:
+            if pd.api.types.is_datetime64_any_dtype(out[col]):
+                out[col] = out[col].dt.date
+        return out.to_dict("records")
+
     ctx = {
         "asof": asof,
         "rate": rate_for(store, asof, settings.rates.fallback_rate),
@@ -190,16 +200,16 @@ def build_report(
         "n_scanned": len(settings.tickers),
         "n_fit": int(metrics["ticker"].nunique()) if not metrics.empty else 0,
         "n_signals": len(primary),
-        "failures": failures.to_dict("records") if not failures.empty else [],
-        "primary": primary.to_dict("records") if not primary.empty else [],
-        "secondary": secondary.to_dict("records") if not secondary.empty else [],
-        "candidates": primary[primary["candidate"].astype(bool)].to_dict("records")
+        "failures": records(failures),
+        "primary": records(primary),
+        "secondary": records(secondary),
+        "candidates": records(primary[primary["candidate"].astype(bool)])
         if not primary.empty
         else [],
-        "earnings": primary[primary["earnings_in_window"].astype(bool)].to_dict("records")
+        "earnings": records(primary[primary["earnings_in_window"].astype(bool)])
         if not primary.empty
         else [],
-        "open_positions": open_pos.to_dict("records"),
+        "open_positions": records(open_pos),
         "stats": stats,
         "charts": charts,
         "asset_dir": asset_dir.name,

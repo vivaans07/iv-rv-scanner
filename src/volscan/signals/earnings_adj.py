@@ -47,19 +47,27 @@ def split_event_variance(
     s = slices.sort_values("T")
     w = (s["atm_vol"] ** 2 * s["T"]).to_numpy()
     T = s["T"].to_numpy()
-    after = (pd.to_datetime(s["expiry"]) > pd.Timestamp(earnings_date)).to_numpy()
+    expiry = pd.to_datetime(s["expiry"])
+    # An expiry on the announcement date is ambiguous: it contains the move for
+    # a before-the-open reporter but not for an after-the-close one. Use only
+    # expiries strictly before and strictly after the date.
+    before = (expiry < pd.Timestamp(earnings_date)).to_numpy()
+    after = (expiry > pd.Timestamp(earnings_date)).to_numpy()
     if not after.any():
         return None
-    j = int(np.argmax(after))
-    if j > 0:
-        base = w[j - 1] / T[j - 1]
+    post = np.flatnonzero(after)
+    pre = np.flatnonzero(before)
+    if len(pre):
+        i, j = pre[-1], post[0]
+        base = w[i] / T[i]
         event = w[j] - base * T[j]
         method = "pre/post expiry pair"
     else:
-        if len(T) < 2:
+        if len(post) < 2:
             return None
-        base = (w[1] - w[0]) / (T[1] - T[0])
-        event = w[0] - base * T[0]
+        i, j = post[0], post[1]
+        base = (w[j] - w[i]) / (T[j] - T[i])
+        event = w[i] - base * T[i]
         method = "two post-event expiries"
     if not np.isfinite(base) or base <= 0:
         return None
