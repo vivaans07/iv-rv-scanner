@@ -44,8 +44,8 @@ htmlcov/
 # Editor and assistant tooling
 .vscode/
 .idea/
-CLAUDE.md
-.claude/
+CLAUD[Ee].md
+.claud[Ee]/
 AGENTS.md
 .cursor/
 .cursorrules
