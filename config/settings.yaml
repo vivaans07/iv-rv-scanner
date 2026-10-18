@@ -52,6 +52,7 @@ paper:
   holding_days: 10
   exit_days_before_expiry: 5
   spread_cross_fraction: 0.5  # fraction of half-spread paid on entry and exit
+  max_entry_rel_spread: 0.15  # skip a straddle if either leg is quoted wider than this
   hedge_vol: implied          # implied | forecast
   stock_cost_bps: 1.0
   stock_cost_per_share: 0.0

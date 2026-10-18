@@ -74,6 +74,7 @@ class PaperSettings(BaseModel):
     holding_days: int = 10
     exit_days_before_expiry: int = 5
     spread_cross_fraction: float = 0.5
+    max_entry_rel_spread: float = 0.15
     hedge_vol: Literal["implied", "forecast"] = "implied"
     stock_cost_bps: float = 1.0
     stock_cost_per_share: float = 0.0

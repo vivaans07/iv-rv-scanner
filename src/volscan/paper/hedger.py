@@ -144,6 +144,15 @@ def open_position(
             break
     else:
         return None
+    # The ticker-level liquidity screen looks at the nearest expiry; the traded
+    # expiry can still be quoted much wider, so check the actual legs.
+    for v in quotes.values():
+        if (
+            v.source != "market"
+            or v.mid <= 0
+            or 2 * v.half_spread / v.mid > cfg.max_entry_rel_spread
+        ):
+            return None
 
     g = _straddle_greeks(m, expiry, strike, quotes, None)
     vega_per_contract = cfg.contract_multiplier * sum(g[t].vega for t in LEGS) / 100.0

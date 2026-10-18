@@ -159,3 +159,8 @@ def test_summary_stats() -> None:
     daily = book_daily(marks)
     assert daily["cum_total_pnl"].iloc[-1] == pytest.approx(15.0)
     assert max_drawdown(pd.Series([0.0, 10.0, 4.0, 12.0, 1.0])) == pytest.approx(-11.0)
+
+
+def test_wide_straddle_is_not_opened() -> None:
+    m = FlatVolMarket(START, 100.0, 0.0, 0.25, [START + timedelta(days=35)], half_spread=1.0)
+    assert open_position("w", "SIM", m, "RICH", 2.0, False, CFG) is None
